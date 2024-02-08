@@ -1,5 +1,6 @@
 package api.tasks.model;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -20,7 +21,7 @@ public class Pack {
     @Column(nullable = false)
     private String title;
 
-    @OneToMany(mappedBy = "pack", orphanRemoval = true)
+    @OneToMany(mappedBy = "pack", cascade = CascadeType.REMOVE)
     private Set<Task> tasks;
 
     public Pack() {}
