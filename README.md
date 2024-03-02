@@ -1,0 +1,1 @@
+[![Java CI with Gradle](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml/badge.svg)](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml)
