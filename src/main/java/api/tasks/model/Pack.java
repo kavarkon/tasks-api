@@ -14,7 +14,7 @@ import java.util.Set;
 public class Pack {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @NotEmpty(message = "Title should not be empty")

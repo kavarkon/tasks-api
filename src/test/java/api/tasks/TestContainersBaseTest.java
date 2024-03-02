@@ -8,7 +8,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
-@Sql("/sql/data.sql")
 @ActiveProfiles("test")
 @SpringBootTest
 @ContextConfiguration(initializers = {
