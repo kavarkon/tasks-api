@@ -24,7 +24,7 @@ public class TaskController {
 
     @Autowired
     private TaskService taskService;
-
+    
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Task task) {
         taskService.create(task);

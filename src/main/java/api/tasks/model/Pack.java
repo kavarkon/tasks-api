@@ -7,9 +7,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import javax.validation.constraints.NotEmpty;
 import java.util.Set;
 
+@Data
+@NoArgsConstructor
 @Entity
 public class Pack {
 
@@ -24,25 +29,7 @@ public class Pack {
     @OneToMany(mappedBy = "pack", cascade = CascadeType.REMOVE)
     private Set<Task> tasks;
 
-    public Pack() {}
-
     public Pack(String title) {
-        this.title = title;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
         this.title = title;
     }
 }

@@ -7,8 +7,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import javax.validation.constraints.NotEmpty;
 
+@Data
+@NoArgsConstructor
 @Entity
 public class Task {
 
@@ -30,39 +35,9 @@ public class Task {
     @JoinColumn(name = "packId", referencedColumnName = "id", insertable=false, updatable=false)
     private Pack pack;
 
-    public Task() {}
-
     public Task(String title, Boolean completed, Integer packId) {
         this.title = title;
         this.completed = completed;
         this.packId = packId;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public Boolean getCompleted() {
-        return completed;
-    }
-
-    public void setCompleted(Boolean completed) {
-        this.completed = completed;
-    }
-
-    public Integer getPackId() {
-        return packId;
     }
 }

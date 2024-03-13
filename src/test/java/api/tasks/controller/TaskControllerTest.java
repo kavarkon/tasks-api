@@ -30,7 +30,7 @@ class TaskControllerTest extends TestContainersBaseTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private int packId1;
     @BeforeEach

@@ -17,22 +17,24 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation 'org.apache.httpcomponents:httpclient'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.postgresql:postgresql:42.7.1'
+	implementation 'jakarta.validation:jakarta.validation-api:2.0.2'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.apache.httpcomponents:httpclient'
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-	implementation 'org.postgresql:postgresql:42.7.1'
-	testImplementation 'ch.qos.logback:logback-classic:1.4.14'
 //	implementation 'org.apache.maven.plugins:maven-surefire-plugin:3.2.2'
-	implementation 'jakarta.validation:jakarta.validation-api:2.0.2'
 	testImplementation 'org.apache.httpcomponents:httpclient:4.5.14'
 	testImplementation 'org.testcontainers:postgresql:1.19.4'
 	testImplementation 'org.testcontainers:junit-jupiter:1.19.4'
 
+	compileOnly 'org.projectlombok:lombok:1.18.30'
+	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 	testCompileOnly 'org.projectlombok:lombok:1.18.30'
 	testAnnotationProcessor 'org.projectlombok:lombok:1.18.30'
 
+	testImplementation 'ch.qos.logback:logback-classic:1.4.14'
 	implementation 'ch.qos.logback:logback-classic:1.4.13'
 	implementation 'ch.qos.logback:logback-core:1.4.13'
 }
