@@ -3,17 +3,15 @@ package api.tasks.service;
 
 import api.tasks.model.Pack;
 import api.tasks.repository.PackRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class PackService {
+    @Autowired
     private PackRepository packRepository;
-
-    public PackService(PackRepository packRepository) {
-        this.packRepository = packRepository;
-    }
 
     public Pack create(Pack pack) {
         return packRepository.save(pack);

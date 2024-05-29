@@ -1,7 +1,7 @@
 package api.tasks.repository;
 
 import api.tasks.model.Pack;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface PackRepository extends CrudRepository<Pack, Integer> {
+public interface PackRepository extends JpaRepository<Pack, Integer> {
 }

@@ -2,6 +2,7 @@ package api.tasks.service;
 
 import api.tasks.model.Task;
 import api.tasks.repository.TaskRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,11 +10,8 @@ import java.util.List;
 @Service
 public class TaskService {
 
+    @Autowired
     private TaskRepository taskRepository;
-
-    public TaskService(TaskRepository taskRepository) {
-        this.taskRepository = taskRepository;
-    }
 
     public void create(Task task) {
         taskRepository.save(task);
