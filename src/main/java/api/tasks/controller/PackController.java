@@ -21,8 +21,12 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:8080")
 @RequestMapping("/api/packs")
 public class PackController {
-    @Autowired
-    private PackService packService;
+
+    private final PackService packService;
+
+    public PackController(PackService packService) {
+        this.packService = packService;
+    }
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Pack pack) {

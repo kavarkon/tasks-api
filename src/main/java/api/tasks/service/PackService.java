@@ -10,8 +10,12 @@ import java.util.List;
 
 @Service
 public class PackService {
-    @Autowired
-    private PackRepository packRepository;
+
+    private final PackRepository packRepository;
+
+    public PackService(PackRepository packRepository) {
+        this.packRepository = packRepository;
+    }
 
     public Pack create(Pack pack) {
         return packRepository.save(pack);
