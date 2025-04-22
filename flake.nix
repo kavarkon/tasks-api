@@ -28,7 +28,7 @@
             export JAVA_HOME=${jdk}
             export PATH="${jdk}/bin:$PATH"
             export GRADLE_OPTS="-Dorg.gradle.java.home=${jdk}"
-            export DATABASE_URL="jdbc:postgresql://localhost/tasks?user=postgre&password=password"
+            export DATABASE_URL="jdbc:postgresql://localhost/tasks?user=postgres&password=password"
 
             echo "Spring Boot Resume Builder development environment"
             echo "JDK version: ${toString javaVersion}"
