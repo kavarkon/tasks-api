@@ -22,6 +22,7 @@
             jdk
             gradle
             spring-boot-cli
+            jdt-language-server
           ];
 
           shellHook = ''
