@@ -24,4 +24,15 @@ public class AuthController {
         return ResponseEntity.ok("User registered successfully");
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+        TokenPair tokenPair = authService.login(loginRequest);
+        return ResponseEntity.ok(tokenPair);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+        TokenPair tokenPair = authService.login(loginRequest);
+        return ResponseEntity.ok(tokenPair);
+    }
 }
