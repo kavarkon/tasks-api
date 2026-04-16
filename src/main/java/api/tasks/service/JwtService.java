@@ -1,5 +1,7 @@
 package api.tasks.service;
 
+import api.tasks.dto.TokenPair;
+import api.tasks.dto.TokenType;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -111,7 +113,7 @@ public class JwtService {
         return claims;
     }
 
-    private Key getSignInKey() {
+    private javax.crypto.SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }

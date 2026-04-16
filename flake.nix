@@ -13,8 +13,8 @@
           inherit system;
           overlays = [ ];
         };
-        javaVersion = 17;
-        jdk = pkgs.jdk17;
+        javaVersion = 21;
+        jdk = pkgs.jdk21;
       in
       {
         devShells.default = pkgs.mkShell {

@@ -1,6 +1,8 @@
 package api.tasks.controller;
 
+import api.tasks.dto.LoginRequest;
 import api.tasks.dto.RegisterRequest;
+import api.tasks.dto.TokenPair;
 import api.tasks.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,12 +24,6 @@ public class AuthController {
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
         authService.registerUser(request);
         return ResponseEntity.ok("User registered successfully");
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
-        TokenPair tokenPair = authService.login(loginRequest);
-        return ResponseEntity.ok(tokenPair);
     }
 
     @PostMapping("/login")

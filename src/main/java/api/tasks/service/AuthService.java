@@ -1,18 +1,25 @@
 package api.tasks.service;
 
+import api.tasks.dto.LoginRequest;
 import api.tasks.dto.RegisterRequest;
+import api.tasks.dto.TokenPair;
 import api.tasks.model.User;
 import api.tasks.repository.UserRepository;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
 
     @Transactional
     public void registerUser(RegisterRequest registerRequest) {
@@ -28,5 +35,15 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+    }
+
+    public TokenPair login(LoginRequest loginRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequest.getUsername(),
+                        loginRequest.getPassword()
+                )
+        );
+        return jwtService.generateTokenPair(authentication);
     }
 }

@@ -1,9 +1,11 @@
-package com.learnwithiftekhar.jwtsecurity.dto;
+package api.tasks.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class TokenPair {
     private String accessToken;
