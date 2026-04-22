@@ -25,7 +25,6 @@ public class PackService {
         return (List<Pack>) packRepository.findAll();
     }
 
-
     public boolean update(Pack pack, int id) {
         if (packRepository.existsById(id)) {
             pack.setId(id);
