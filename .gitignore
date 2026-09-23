@@ -36,3 +36,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Local certificates and private keys
+*.pem
+*.key

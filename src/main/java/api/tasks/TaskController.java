@@ -1,8 +1,9 @@
-package api.tasks.controller;
+package api.tasks;
 
-import api.tasks.model.Task;
-import api.tasks.service.TaskService;
-import org.springframework.beans.factory.annotation.Autowired;
+import api.tasks.dto.CreateTaskRequest;
+import api.tasks.dto.TaskResponse;
+import api.tasks.dto.UpdateTaskRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -29,32 +30,27 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Task task) {
-        taskService.create(task);
-        return new ResponseEntity<>(HttpStatus.CREATED);
+    public ResponseEntity<TaskResponse> create(@Valid @RequestBody CreateTaskRequest request) {
+        TaskResponse response = taskService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<Task>> index() {
-        final List<Task> tasks = taskService.index();
-        return new ResponseEntity<>(tasks, HttpStatus.OK);
+    public ResponseEntity<List<TaskResponse>> index() {
+        return ResponseEntity.ok(taskService.index());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Integer id, @RequestBody Task task) {
-        final boolean updated = taskService.update(task, id);
-
-        return updated
-                ? new ResponseEntity<>(HttpStatus.OK)
-                : new ResponseEntity<>(HttpStatus.NOT_MODIFIED);
+    public ResponseEntity<TaskResponse> update(
+            @PathVariable Integer id,
+            @Valid @RequestBody UpdateTaskRequest request
+    ) {
+        return ResponseEntity.ok(taskService.update(request, id));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Integer id) {
-        final boolean deleted = taskService.delete(id);
-
-        return deleted
-                ? new ResponseEntity<>(HttpStatus.OK)
-                : new ResponseEntity<>(HttpStatus.NOT_MODIFIED);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        taskService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

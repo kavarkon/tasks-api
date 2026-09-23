@@ -36,15 +36,12 @@
             export DATABASE_URL="jdbc:postgresql://localhost/tasks?user=postgres&password=password"
             export JDTLS_JVM_ARGS="-javaagent:${pkgs.lombok}/share/java/lombok.jar"
 
-            echo "Spring Boot Resume Builder development environment"
+            echo "Tasks API development environment"
             echo "JDK version: ${toString javaVersion}"
             echo "JDK path: $JAVA_HOME"
             java --version
             gradle --version
 
-            # Ensure Gradle uses the correct JDK
-            mkdir -p .gradle
-            echo "org.gradle.java.home=${jdk}" >> .gradle/gradle.properties
           '';
         };
 

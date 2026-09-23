@@ -1,0 +1,8 @@
+.git
+.gradle
+.idea
+.direnv
+build
+bin
+*.pem
+*.key
