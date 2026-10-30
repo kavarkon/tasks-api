@@ -4,7 +4,6 @@ import api.tasks.dto.CreateTaskRequest;
 import api.tasks.dto.TaskResponse;
 import api.tasks.dto.UpdateTaskRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -32,12 +32,18 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<TaskResponse> create(@Valid @RequestBody CreateTaskRequest request) {
         TaskResponse response = taskService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        URI location = URI.create("/api/tasks/" + response.getId());
+        return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping
     public ResponseEntity<List<TaskResponse>> index() {
         return ResponseEntity.ok(taskService.index());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TaskResponse> getById(@PathVariable Integer id) {
+        return ResponseEntity.ok(taskService.getById(id));
     }
 
     @PutMapping("/{id}")

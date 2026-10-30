@@ -1,10 +1,10 @@
 package api.packs;
 
 import api.packs.dto.CreatePackRequest;
+import api.packs.dto.PackDetailsResponse;
 import api.packs.dto.PackResponse;
 import api.packs.dto.UpdatePackRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -32,12 +33,18 @@ public class PackController {
     @PostMapping
     public ResponseEntity<PackResponse> create(@Valid @RequestBody CreatePackRequest request) {
         PackResponse response = packService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        URI location = URI.create("/api/packs/" + response.getId());
+        return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping
     public ResponseEntity<List<PackResponse>> index() {
         return ResponseEntity.ok(packService.index());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PackDetailsResponse> getById(@PathVariable Integer id) {
+        return ResponseEntity.ok(packService.getById(id));
     }
 
     @PutMapping("/{id}")

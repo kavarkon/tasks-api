@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -45,6 +46,15 @@ public class ApiExceptionHandler {
             HttpServletRequest request
     ) {
         return error(HttpStatus.BAD_REQUEST, "Request body is invalid", request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleInvalidParameter(
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
+        return error(HttpStatus.BAD_REQUEST,
+                "Invalid value for parameter '" + exception.getName() + "'", request);
     }
 
     @ExceptionHandler(Exception.class)

@@ -43,6 +43,7 @@ SPRING_PROFILES_ACTIVE=prod DATABASE_URL='jdbc:postgresql://db/tasks?user=app&pa
 ### Packs
 
 - `GET /api/packs`
+- `GET /api/packs/{id}` returns a pack with its tasks
 - `POST /api/packs` with `{ "title": "Work" }`
 - `PUT /api/packs/{id}` with `{ "title": "Updated work" }`
 - `DELETE /api/packs/{id}`
@@ -50,11 +51,14 @@ SPRING_PROFILES_ACTIVE=prod DATABASE_URL='jdbc:postgresql://db/tasks?user=app&pa
 ### Tasks
 
 - `GET /api/tasks`
+- `GET /api/tasks/{id}`
 - `POST /api/tasks` with `{ "title": "Read", "completed": false, "packId": 1 }`
 - `PUT /api/tasks/{id}` with `{ "title": "Read book", "completed": true, "packId": 1 }`
 - `DELETE /api/tasks/{id}`
 
-Successful deletion returns `204 No Content`. Unknown resources return `404 Not Found`, and invalid request bodies return `400 Bad Request`.
+Creation returns `201 Created` with the created resource and a `Location` header. Successful deletion returns `204 No Content`. Unknown resources return `404 Not Found`, and invalid request bodies or IDs return `400 Bad Request`.
+
+During development, the initial migration may be changed while the database contains no valuable data. Flyway checks migration checksums, so recreate the development database after changing an already applied migration. Once deployed with valuable data, keep applied migrations unchanged and add a new versioned migration for each schema change.
 
 ## Tests
 

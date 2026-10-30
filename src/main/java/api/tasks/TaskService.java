@@ -38,6 +38,13 @@ public class TaskService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public TaskResponse getById(int id) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task", id));
+        return toResponse(task);
+    }
+
     @Transactional
     public TaskResponse update(UpdateTaskRequest request, int id) {
         Task task = taskRepository.findById(id)
