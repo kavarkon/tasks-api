@@ -23,33 +23,33 @@ public class TaskService {
     }
 
     @Transactional
-    public TaskResponse create(CreateTaskRequest request) {
-        Pack pack = findPack(request.getPackId());
+    public TaskResponse create(CreateTaskRequest request, Integer userId) {
+        Pack pack = findPack(request.getPackId(), userId);
         Task task = new Task(request.getTitle(), request.getCompleted(), pack);
 
         return toResponse(taskRepository.save(task));
     }
 
     @Transactional(readOnly = true)
-    public List<TaskResponse> index() {
-        return taskRepository.findAll()
+    public List<TaskResponse> index(Integer userId) {
+        return taskRepository.findAllByPackUserId(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public TaskResponse getById(int id) {
-        Task task = taskRepository.findById(id)
+    public TaskResponse getById(int id, Integer userId) {
+        Task task = taskRepository.findByIdAndPackUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", id));
         return toResponse(task);
     }
 
     @Transactional
-    public TaskResponse update(UpdateTaskRequest request, int id) {
-        Task task = taskRepository.findById(id)
+    public TaskResponse update(UpdateTaskRequest request, int id, Integer userId) {
+        Task task = taskRepository.findByIdAndPackUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", id));
-        Pack pack = findPack(request.getPackId());
+        Pack pack = findPack(request.getPackId(), userId);
 
         task.setTitle(request.getTitle());
         task.setCompleted(request.getCompleted());
@@ -59,14 +59,14 @@ public class TaskService {
     }
 
     @Transactional
-    public void delete(int id) {
-        Task task = taskRepository.findById(id)
+    public void delete(int id, Integer userId) {
+        Task task = taskRepository.findByIdAndPackUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", id));
         taskRepository.delete(task);
     }
 
-    private Pack findPack(Integer id) {
-        return packRepository.findById(id)
+    private Pack findPack(Integer id, Integer userId) {
+        return packRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pack", id));
     }
 

@@ -6,7 +6,7 @@ import api.packs.dto.PackResponse;
 import api.packs.dto.UpdatePackRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +20,6 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/packs")
 public class PackController {
 
@@ -31,33 +30,40 @@ public class PackController {
     }
 
     @PostMapping
-    public ResponseEntity<PackResponse> create(@Valid @RequestBody CreatePackRequest request) {
-        PackResponse response = packService.create(request);
+    public ResponseEntity<PackResponse> create(
+            @AuthenticationPrincipal Integer userId,
+            @Valid @RequestBody CreatePackRequest request
+    ) {
+        PackResponse response = packService.create(request, userId);
         URI location = URI.create("/api/packs/" + response.getId());
         return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<PackResponse>> index() {
-        return ResponseEntity.ok(packService.index());
+    public ResponseEntity<List<PackResponse>> index(@AuthenticationPrincipal Integer userId) {
+        return ResponseEntity.ok(packService.index(userId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PackDetailsResponse> getById(@PathVariable Integer id) {
-        return ResponseEntity.ok(packService.getById(id));
+    public ResponseEntity<PackDetailsResponse> getById(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal Integer userId
+    ) {
+        return ResponseEntity.ok(packService.getById(id, userId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<PackResponse> update(
             @PathVariable Integer id,
+            @AuthenticationPrincipal Integer userId,
             @Valid @RequestBody UpdatePackRequest request
     ) {
-        return ResponseEntity.ok(packService.update(request, id));
+        return ResponseEntity.ok(packService.update(request, id, userId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        packService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id, @AuthenticationPrincipal Integer userId) {
+        packService.delete(id, userId);
         return ResponseEntity.noContent().build();
     }
 }

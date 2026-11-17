@@ -2,7 +2,10 @@
 .gradle
 .idea
 .direnv
-build
+build/*
+!build/libs/
+build/libs/*
+!build/libs/tasks-0.0.1-SNAPSHOT.jar
 bin
 *.pem
 *.key

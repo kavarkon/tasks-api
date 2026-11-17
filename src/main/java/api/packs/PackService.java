@@ -7,6 +7,8 @@ import api.packs.dto.PackResponse;
 import api.packs.dto.UpdatePackRequest;
 import api.tasks.TaskRepository;
 import api.tasks.dto.TaskResponse;
+import api.users.User;
+import api.users.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,18 +19,20 @@ public class PackService {
 
     private final PackRepository packRepository;
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
 
-    public PackService(PackRepository packRepository, TaskRepository taskRepository) {
+    public PackService(PackRepository packRepository, TaskRepository taskRepository, UserRepository userRepository) {
         this.packRepository = packRepository;
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
-    public PackDetailsResponse getById(int id) {
-        Pack pack = packRepository.findById(id)
+    public PackDetailsResponse getById(int id, Integer userId) {
+        Pack pack = packRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pack", id));
 
-        List<TaskResponse> tasks = taskRepository.findAllByPackId(id)
+        List<TaskResponse> tasks = taskRepository.findAllByPackIdOrderByIdAsc(id)
                 .stream()
                 .map(task -> new TaskResponse(
                         task.getId(), task.getTitle(), task.getCompleted(), id))
@@ -38,22 +42,24 @@ public class PackService {
     }
 
     @Transactional
-    public PackResponse create(CreatePackRequest request) {
-        Pack pack = new Pack(request.getTitle());
+    public PackResponse create(CreatePackRequest request, Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        Pack pack = new Pack(request.getTitle(), user);
         return toResponse(packRepository.save(pack));
     }
 
     @Transactional(readOnly = true)
-    public List<PackResponse> index() {
-        return packRepository.findAll()
+    public List<PackResponse> index(Integer userId) {
+        return packRepository.findAllByUserId(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional
-    public PackResponse update(UpdatePackRequest request, int id) {
-        Pack pack = packRepository.findById(id)
+    public PackResponse update(UpdatePackRequest request, int id, Integer userId) {
+        Pack pack = packRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pack", id));
 
         pack.setTitle(request.getTitle());
@@ -61,8 +67,8 @@ public class PackService {
     }
 
     @Transactional
-    public void delete(int id) {
-        Pack pack = packRepository.findById(id)
+    public void delete(int id, Integer userId) {
+        Pack pack = packRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pack", id));
         packRepository.delete(pack);
     }

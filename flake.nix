@@ -17,8 +17,8 @@
           inherit system;
           overlays = [];
         };
-        javaVersion = 17;
-        jdk = pkgs.jdk17;
+        javaVersion = 21;
+        jdk = pkgs.jdk21;
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
@@ -58,7 +58,7 @@
           buildPhase = ''
             export JAVA_HOME=${jdk}
             export PATH="${jdk}/bin:$PATH"
-            ./gradlew build -x test
+            ./gradlew assemble
           '';
 
           installPhase = ''

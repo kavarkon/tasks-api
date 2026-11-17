@@ -1,5 +1,8 @@
 package api.common;
 
+import api.auth.EmailAlreadyExistsException;
+import api.auth.InvalidPasswordException;
+import api.auth.InvalidCredentialsException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +14,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -31,13 +35,40 @@ public class ApiExceptionHandler {
             MethodArgumentNotValidException exception,
             HttpServletRequest request
     ) {
-        String message = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining(", "));
+        Map<String, String> fields = new LinkedHashMap<>();
+        exception.getBindingResult().getFieldErrors().forEach(fieldError ->
+                fields.putIfAbsent(fieldError.getField(), fieldError.getDefaultMessage()));
 
-        return error(HttpStatus.BAD_REQUEST, message, request);
+        ApiError body = new ApiError(400, "Проверьте введённые данные", request.getRequestURI(), fields);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleEmailAlreadyExists(
+            EmailAlreadyExistsException exception,
+            HttpServletRequest request
+    ) {
+        ApiError body = new ApiError(409, "Этот адрес уже зарегистрирован", request.getRequestURI(),
+                Map.of("email", "Этот адрес уже занят"));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(InvalidPasswordException.class)
+    public ResponseEntity<ApiError> handleInvalidPassword(
+            InvalidPasswordException exception,
+            HttpServletRequest request
+    ) {
+        ApiError body = new ApiError(400, "Проверьте введённые данные", request.getRequestURI(),
+                Map.of("password", exception.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(
+            InvalidCredentialsException exception,
+            HttpServletRequest request
+    ) {
+        return error(HttpStatus.UNAUTHORIZED, "Неверная почта или пароль", request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
