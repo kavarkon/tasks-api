@@ -21,7 +21,7 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
-    - name: Build with Gradle
+    - name: Set up Gradle
       uses: gradle/actions/setup-gradle@v3
-    - name: Assemble application
-      run: ./gradlew assemble
+    - name: Build and test application
+      run: ./gradlew build

@@ -35,6 +35,9 @@
             export GRADLE_OPTS="-Dorg.gradle.java.home=${jdk}"
             export DATABASE_URL="jdbc:postgresql://localhost/tasks?user=postgres&password=password"
             export JDTLS_JVM_ARGS="-javaagent:${pkgs.lombok}/share/java/lombok.jar"
+            if [ -z "''${DOCKER_HOST+x}" ] && [ -S "''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock" ]; then
+              export DOCKER_HOST="unix://''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock"
+            fi
 
             echo "Tasks API development environment"
             echo "JDK version: ${toString javaVersion}"

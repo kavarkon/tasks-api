@@ -1,0 +1,17 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+jwt:
+  secret: test-secret-not-for-production-123456789
+
+cookie:
+  secure: false
+cors:
+  allowed-origin: http://localhost:5173
+
+logging:
+  level:
+    root: WARN
+    api: INFO

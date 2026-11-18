@@ -30,15 +30,12 @@ dependencies {
 	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.testcontainers:postgresql'
-	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.testcontainers:testcontainers-postgresql'
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 }
 
 
 test {
 	useJUnitPlatform()
-	enabled = false
-	setDependsOn([])
-	testClassesDirs = files()
-	classpath = files()
 }

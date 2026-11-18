@@ -1,28 +1,29 @@
 package api;
 
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @ActiveProfiles("test")
 @SpringBootTest
+@AutoConfigureMockMvc
+@Import(TestContainersBaseTest.PostgreSQLTestConfiguration.class)
 @Transactional
 public abstract class TestContainersBaseTest {
 
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    @TestConfiguration(proxyBeanMethods = false)
+    static class PostgreSQLTestConfiguration {
 
-    static {
-        // The container is shared by all test classes and starts before Spring creates its context.
-        postgres.start();
-    }
-
-    @DynamicPropertySource
-    static void registerDatabaseProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
+        @Bean
+        @ServiceConnection
+        PostgreSQLContainer createPostgreSQLContainer() {
+            return new PostgreSQLContainer("postgres:16-alpine");
+        }
     }
 }

@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+cookie:
+  secure: true
+cors:
+  allowed-origin: ${CORS_ALLOWED_ORIGIN}
+
+logging:
+  level:
+    root: INFO
