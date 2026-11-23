@@ -1,6 +1,3 @@
-# Tasks API
-Spring Boot REST API for organizing tasks into packs. Each user manages their own packs and tasks.
-
 [![Gradle build](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml/badge.svg)](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml) CI runs `./gradlew build` to assemble the application and run the test suite.
 
 ## Run locally
@@ -9,7 +6,7 @@ The default profile is `dev`. Use a disposable PostgreSQL database: Hibernate re
 With Nix, start PostgreSQL first and make sure the `tasks` database exists. The dev shell provides Java 21 and sets `DATABASE_URL` for PostgreSQL on `localhost:5432` with user `postgres` and password `password`. It does not start PostgreSQL.
 
 ```bash
-nix develop --command ./gradlew bootRun
+./gradlew bootRun
 ```
 
 Without Nix, use JDK 21 and set `DATABASE_URL` yourself:
@@ -24,7 +21,7 @@ The `dev` profile has a development signing key. Set `JWT_SECRET` to override it
 Testcontainers starts PostgreSQL. You need a running container engine accessible to Testcontainers, not a local database or an external JWT secret. The `test` profile uses a dedicated test key. Flyway applies migrations and Hibernate validates the schema.
 
 ```bash
-nix develop --command ./gradlew test
+./gradlew test
 ```
 
 Rootless Podman is supported: if `DOCKER_HOST` is unset and the user's Podman socket exists, the dev shell selects it. With JDK 21 and a container engine already configured, run `./gradlew test` directly.

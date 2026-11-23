@@ -19,6 +19,13 @@ import org.springframework.test.web.servlet.ResultActions;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.stream.Stream;
 
 import static api.ApiTestSupport.*;
@@ -67,6 +74,28 @@ class AuthenticationTest extends TestContainersBaseTest {
         submit(REGISTER, createCredentials(duplicate)).andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409)).andExpect(jsonPath("$.path").value(REGISTER))
                 .andExpect(jsonPath("$.message").isNotEmpty()).andExpect(jsonPath("$.fields.email").isNotEmpty());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void registerConcurrentRequestsWithSameEmailReturnsCreatedAndConflict() throws Exception {
+        String email = "concurrent-registration@example.com";
+        String credentials = createCredentials(email);
+        var startBarrier = new CyclicBarrier(2);
+        Callable<Integer> register = () -> {
+            var request = createChangingRequest(mockMvc, "POST", REGISTER, null)
+                    .contentType(APPLICATION_JSON).content(credentials);
+            startBarrier.await(10, TimeUnit.SECONDS);
+            return mockMvc.perform(request).andReturn().getResponse().getStatus();
+        };
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(register);
+            var second = executor.submit(register);
+            var statuses = List.of(first.get(30, TimeUnit.SECONDS), second.get(30, TimeUnit.SECONDS));
+            assertEquals(List.of(201, 409), statuses.stream().sorted().toList());
+        } finally {
+            jdbcTemplate.update("DELETE FROM users WHERE email = ?", email);
+        }
     }
 
     @Test

@@ -10,7 +10,6 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 
@@ -27,7 +26,6 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    @Transactional(readOnly = true)
     public LoginResult login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(InvalidCredentialsException::new);
@@ -45,7 +43,6 @@ public class AuthService {
     public record LoginResult(String token, UserResponse user) {
     }
 
-    @Transactional
     public UserResponse register(RegisterRequest request) {
         if (request.getPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new InvalidPasswordException("Пароль не может быть длиннее 72 байт в UTF-8");
