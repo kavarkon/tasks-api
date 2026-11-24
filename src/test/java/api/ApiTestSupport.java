@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public final class ApiTestSupport {
+    public static final String EMPTY_PAGE = "{\"items\":[],\"nextAfterId\":null}";
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private ApiTestSupport() {}
@@ -63,6 +64,17 @@ public final class ApiTestSupport {
         return mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/auth/login", null)
                         .contentType(APPLICATION_JSON).content(credentials)).andExpect(status().isOk())
                 .andReturn().getResponse().getCookie("access_token").getValue();
+    }
+
+    public static String readNextAfterId(MvcResult result) {
+        return String.valueOf(JSON.readTree(result.getResponse().getContentAsByteArray()).get("nextAfterId").intValue());
+    }
+
+    public static Stream<Arguments> provideInvalidPaginationParameters() {
+        return Stream.concat(
+                Stream.of(Arguments.of("limit", "101")),
+                Stream.of("limit", "afterId").flatMap(name -> Stream.of("", "   ", "0", "-1", "abc", "2147483648")
+                        .map(value -> Arguments.of(name, value))));
     }
 
     public static int readCreatedId(MvcResult result, String collectionPath) {

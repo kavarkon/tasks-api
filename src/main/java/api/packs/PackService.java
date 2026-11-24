@@ -1,12 +1,10 @@
 package api.packs;
 
+import api.common.CursorPage;
+import api.common.PageQuery;
 import api.common.ResourceNotFoundException;
-import api.packs.dto.CreatePackRequest;
-import api.packs.dto.PackDetailsResponse;
 import api.packs.dto.PackResponse;
-import api.packs.dto.UpdatePackRequest;
-import api.tasks.TaskRepository;
-import api.tasks.dto.TaskResponse;
+import api.packs.dto.PackWriteRequest;
 import api.users.User;
 import api.users.UserRepository;
 import org.springframework.stereotype.Service;
@@ -18,51 +16,41 @@ import java.util.List;
 public class PackService {
 
     private final PackRepository packRepository;
-    private final TaskRepository taskRepository;
     private final UserRepository userRepository;
 
-    public PackService(PackRepository packRepository, TaskRepository taskRepository, UserRepository userRepository) {
+    public PackService(PackRepository packRepository, UserRepository userRepository) {
         this.packRepository = packRepository;
-        this.taskRepository = taskRepository;
         this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
-    public PackDetailsResponse getById(int id, Integer userId) {
+    public PackResponse getById(int id, Integer userId) {
         Pack pack = packRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pack", id));
 
-        List<TaskResponse> tasks = taskRepository.findAllByPackIdOrderByIdAsc(id)
-                .stream()
-                .map(task -> new TaskResponse(
-                        task.getId(), task.getTitle(), task.getCompleted(), id))
-                .toList();
-
-        return new PackDetailsResponse(pack.getId(), pack.getTitle(), tasks);
+        return toResponse(pack);
     }
 
     @Transactional
-    public PackResponse create(CreatePackRequest request, Integer userId) {
+    public PackResponse create(PackWriteRequest request, Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-        Pack pack = new Pack(request.getTitle(), user);
+        Pack pack = new Pack(request.title(), user);
         return toResponse(packRepository.save(pack));
     }
 
     @Transactional(readOnly = true)
-    public List<PackResponse> index(Integer userId) {
-        return packRepository.findAllByUserId(userId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public CursorPage<PackResponse> index(Integer userId, PageQuery page) {
+        List<Pack> packs = packRepository.findByUserIdAndIdGreaterThanOrderByIdAsc(userId, page.afterId(), page.fetchLimit());
+        return CursorPage.fromRows(packs, page.limit(), this::toResponse, Pack::getId);
     }
 
     @Transactional
-    public PackResponse update(UpdatePackRequest request, int id, Integer userId) {
+    public PackResponse update(PackWriteRequest request, int id, Integer userId) {
         Pack pack = packRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pack", id));
 
-        pack.setTitle(request.getTitle());
+        pack.setTitle(request.title());
         return toResponse(packRepository.save(pack));
     }
 

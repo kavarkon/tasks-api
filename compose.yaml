@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tasks
+      POSTGRES_USER: tasks
+      POSTGRES_PASSWORD: local-only
+    volumes:
+      - tasks-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "tasks", "-d", "tasks"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DATABASE_URL: jdbc:postgresql://db:5432/tasks
+      SPRING_DATASOURCE_USERNAME: tasks
+      SPRING_DATASOURCE_PASSWORD: local-only
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  tasks-data:

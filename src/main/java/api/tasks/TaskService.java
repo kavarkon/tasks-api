@@ -1,15 +1,17 @@
 package api.tasks;
 
+import api.common.CursorPage;
+import api.common.PageQuery;
 import api.common.ResourceNotFoundException;
 import api.packs.Pack;
 import api.packs.PackRepository;
-import api.tasks.dto.CreateTaskRequest;
 import api.tasks.dto.TaskResponse;
-import api.tasks.dto.UpdateTaskRequest;
+import api.tasks.dto.TaskWriteRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.function.Function;
 
 @Service
 public class TaskService {
@@ -23,36 +25,42 @@ public class TaskService {
     }
 
     @Transactional
-    public TaskResponse create(CreateTaskRequest request, Integer userId) {
-        Pack pack = findPack(request.getPackId(), userId);
-        Task task = new Task(request.getTitle(), request.getCompleted(), pack);
+    public TaskResponse create(TaskWriteRequest request, Integer userId) {
+        Pack pack = findPack(request.packId(), userId);
+        Task task = new Task(request.title(), request.completed(), pack);
 
         return toResponse(taskRepository.save(task));
     }
 
     @Transactional(readOnly = true)
-    public List<TaskResponse> index(Integer userId) {
-        return taskRepository.findAllByPackUserId(userId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public CursorPage<TaskResponse> index(Integer userId, PageQuery page, Integer packId) {
+        List<TaskResponse> tasks;
+        if (packId == null) {
+            tasks = taskRepository.findPageByOwner(userId, page.afterId(), page.fetchLimit());
+        } else {
+            if (!packRepository.existsByIdAndUserId(packId, userId)) {
+                throw new ResourceNotFoundException("Pack", packId);
+            }
+            tasks = taskRepository.findPageByOwnerAndPack(
+                    userId, packId, page.afterId(), page.fetchLimit());
+        }
+        return CursorPage.fromRows(tasks, page.limit(), Function.identity(), TaskResponse::id);
     }
 
     @Transactional(readOnly = true)
     public TaskResponse getById(int id, Integer userId) {
-        Task task = taskRepository.findByIdAndPackUserId(id, userId)
+        return taskRepository.findResponseByIdAndOwner(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", id));
-        return toResponse(task);
     }
 
     @Transactional
-    public TaskResponse update(UpdateTaskRequest request, int id, Integer userId) {
+    public TaskResponse update(TaskWriteRequest request, int id, Integer userId) {
         Task task = taskRepository.findByIdAndPackUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", id));
-        Pack pack = findPack(request.getPackId(), userId);
+        Pack pack = findPack(request.packId(), userId);
 
-        task.setTitle(request.getTitle());
-        task.setCompleted(request.getCompleted());
+        task.setTitle(request.title());
+        task.setCompleted(request.completed());
         task.setPack(pack);
 
         return toResponse(taskRepository.save(task));
@@ -74,7 +82,7 @@ public class TaskService {
         return new TaskResponse(
                 task.getId(),
                 task.getTitle(),
-                task.getCompleted(),
+                task.isCompleted(),
                 task.getPack().getId()
         );
     }

@@ -11,9 +11,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static api.ApiTestSupport.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpHeaders.ALLOW;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.TEXT_PLAIN;
 import static org.springframework.test.json.JsonCompareMode.STRICT;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -43,6 +47,33 @@ class ErrorTest extends TestContainersBaseTest {
     }
 
     @Test
+    void returnMethodNotAllowedWithSupportedMethods() throws Exception {
+        String accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
+        String path = "/api/packs/7";
+        mockMvc.perform(createChangingRequest(mockMvc, "PATCH", path, accessToken)
+                        .contentType(APPLICATION_JSON).content("{}"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string(ALLOW, containsString("PUT")))
+                .andExpect(header().string(ALLOW, not(containsString("PATCH"))))
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
+                .andExpect(content().json("""
+                        {"status":405,"message":"Метод запроса не поддерживается","path":"/api/packs/7"}
+                        """, STRICT));
+    }
+
+    @Test
+    void returnUnsupportedMediaTypeForPlainTextTaskRequest() throws Exception {
+        String accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
+        mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/tasks", accessToken)
+                        .contentType(TEXT_PLAIN).content("{}"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
+                .andExpect(content().json("""
+                        {"status":415,"message":"Тип содержимого запроса не поддерживается","path":"/api/tasks"}
+                        """, STRICT));
+    }
+
+    @Test
     void returnGeneralErrorWithStatusMessageAndPath() throws Exception {
         String accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
         mockMvc.perform(get("/api/tasks/42").cookie(accessCookie(accessToken))).andExpect(status().isNotFound())
@@ -63,7 +94,7 @@ class ErrorTest extends TestContainersBaseTest {
 
     @Test
     void returnInternalServerErrorWithoutTechnicalDetails() throws Exception {
-        when(packService.index(any())).thenThrow(new IllegalStateException("unexpected database detail"));
+        when(packService.index(any(), any())).thenThrow(new IllegalStateException("unexpected database detail"));
         String accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
         mockMvc.perform(get("/api/packs").cookie(accessCookie(accessToken))).andExpect(status().isInternalServerError())
                 .andExpect(content().json("{\"status\":500,\"message\":\"Internal server error\",\"path\":\"/api/packs\"}", STRICT));

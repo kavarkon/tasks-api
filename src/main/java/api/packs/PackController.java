@@ -1,9 +1,10 @@
 package api.packs;
 
-import api.packs.dto.CreatePackRequest;
-import api.packs.dto.PackDetailsResponse;
+import api.common.CursorPage;
+import api.common.PageQuery;
+
 import api.packs.dto.PackResponse;
-import api.packs.dto.UpdatePackRequest;
+import api.packs.dto.PackWriteRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,10 +15,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/packs")
@@ -32,20 +33,25 @@ public class PackController {
     @PostMapping
     public ResponseEntity<PackResponse> create(
             @AuthenticationPrincipal Integer userId,
-            @Valid @RequestBody CreatePackRequest request
+            @Valid @RequestBody PackWriteRequest request
     ) {
         PackResponse response = packService.create(request, userId);
-        URI location = URI.create("/api/packs/" + response.getId());
+        URI location = URI.create("/api/packs/" + response.id());
         return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<PackResponse>> index(@AuthenticationPrincipal Integer userId) {
-        return ResponseEntity.ok(packService.index(userId));
+    public ResponseEntity<CursorPage<PackResponse>> index(
+            @AuthenticationPrincipal Integer userId,
+            @RequestParam(required = false) String limit,
+            @RequestParam(required = false) String afterId
+    ) {
+        PageQuery page = PageQuery.parse(limit, afterId);
+        return ResponseEntity.ok(packService.index(userId, page));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PackDetailsResponse> getById(
+    public ResponseEntity<PackResponse> getById(
             @PathVariable Integer id,
             @AuthenticationPrincipal Integer userId
     ) {
@@ -56,7 +62,7 @@ public class PackController {
     public ResponseEntity<PackResponse> update(
             @PathVariable Integer id,
             @AuthenticationPrincipal Integer userId,
-            @Valid @RequestBody UpdatePackRequest request
+            @Valid @RequestBody PackWriteRequest request
     ) {
         return ResponseEntity.ok(packService.update(request, id, userId));
     }

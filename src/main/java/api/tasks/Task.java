@@ -3,6 +3,7 @@ package api.tasks;
 import api.packs.Pack;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,16 +23,16 @@ public class Task {
     private String title;
 
     @Column(nullable = false)
-    private Boolean completed;
+    private boolean completed;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pack_id", nullable = false)
     private Pack pack;
 
     protected Task() {
     }
 
-    public Task(String title, Boolean completed, Pack pack) {
+    public Task(String title, boolean completed, Pack pack) {
         this.title = title;
         this.completed = completed;
         this.pack = pack;
@@ -49,11 +50,11 @@ public class Task {
         this.title = title;
     }
 
-    public Boolean getCompleted() {
+    public boolean isCompleted() {
         return completed;
     }
 
-    public void setCompleted(Boolean completed) {
+    public void setCompleted(boolean completed) {
         this.completed = completed;
     }
 

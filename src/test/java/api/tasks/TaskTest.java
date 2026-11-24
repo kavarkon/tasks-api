@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static api.ApiTestSupport.*;
@@ -37,18 +38,78 @@ class TaskTest extends TestContainersBaseTest {
     }
 
     @Test
-    void listReturnsOnlyCurrentUserTasks() throws Exception {
-        int ownTaskId = createTask(mockMvc, accessToken, "Mine", false, packId);
+    void listTasksFromAllOwnedPacksAcrossPages() throws Exception {
+        int first = createTask(mockMvc, accessToken, "Z", false, packId);
         String otherToken = createUserAndGetAccessToken(mockMvc, "other@example.com");
-        createTask(mockMvc, otherToken, "Private", true, createPack(mockMvc, otherToken, "Other"));
-        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken))).andExpect(status().isOk())
-                .andExpect(content().json("[" + expectedTask(ownTaskId, "Mine", false, packId) + "]", STRICT));
+        createTask(mockMvc, otherToken, "Private", true, createPack(mockMvc, otherToken, "Private"));
+        int secondPack = createPack(mockMvc, accessToken, "Other");
+        int second = createTask(mockMvc, accessToken, "A", true, secondPack);
+
+        var firstPage = mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("limit", "1"))
+                .andExpect(status().isOk()).andExpect(content().json("""
+                        {"items":[%s],"nextAfterId":%d}
+                        """.formatted(expectedTask(first, "Z", false, packId), first), STRICT)).andReturn();
+        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("limit", "1")
+                        .param("afterId", readNextAfterId(firstPage)))
+                .andExpect(status().isOk()).andExpect(content().json("""
+                        {"items":[%s],"nextAfterId":null}
+                        """.formatted(expectedTask(second, "A", true, secondPack)), STRICT));
     }
 
     @Test
-    void listReturnsEmptyArrayWhenUserHasNoTasks() throws Exception {
-        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken))).andExpect(status().isOk())
-                .andExpect(content().json("[]", STRICT));
+    void listTasksFromSelectedPackAcrossPages() throws Exception {
+        int first = createTask(mockMvc, accessToken, "Z", false, packId);
+        createTask(mockMvc, accessToken, "Excluded", false, createPack(mockMvc, accessToken, "Other"));
+        int second = createTask(mockMvc, accessToken, "A", true, packId);
+
+        var firstPage = mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("limit", "1")
+                        .param("packId", String.valueOf(packId)))
+                .andExpect(status().isOk()).andExpect(content().json("""
+                        {"items":[%s],"nextAfterId":%d}
+                        """.formatted(expectedTask(first, "Z", false, packId), first), STRICT)).andReturn();
+        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("limit", "1")
+                        .param("afterId", readNextAfterId(firstPage)).param("packId", String.valueOf(packId)))
+                .andExpect(status().isOk()).andExpect(content().json("""
+                        {"items":[%s],"nextAfterId":null}
+                        """.formatted(expectedTask(second, "A", true, packId)), STRICT));
+    }
+
+    @Test
+    void listReturnsEmptyPageWhenUserHasNoTasks() throws Exception {
+        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("limit", "100")).andExpect(status().isOk())
+                .andExpect(content().json(EMPTY_PAGE, STRICT));
+    }
+
+    @Test
+    void listReturnsEmptyPageForEmptyOwnedPack() throws Exception {
+        createTask(mockMvc, accessToken, "Other", false, createPack(mockMvc, accessToken, "Other"));
+        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("packId", String.valueOf(packId)))
+                .andExpect(status().isOk()).andExpect(content().json(EMPTY_PAGE, STRICT));
+    }
+
+    @Test
+    void listTasksReturnsNotFoundForForeignOrDeletedPack() throws Exception {
+        int foreign = createPack(mockMvc, createUserAndGetAccessToken(mockMvc, "other@example.com"), "Private");
+        mockMvc.perform(createChangingRequest(mockMvc, "DELETE", "/api/packs/" + packId, accessToken))
+                .andExpect(status().isNoContent());
+        for (int unavailable : List.of(foreign, packId)) {
+            mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("packId", String.valueOf(unavailable)))
+                    .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("api.ApiTestSupport#provideInvalidPaginationParameters")
+    void listTasksRejectsInvalidPaginationParameter(String name, String value) throws Exception {
+        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param(name, value))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "-1", "abc", "2147483648", "", "   "})
+    void listTasksRejectsInvalidPackFilter(String value) throws Exception {
+        mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("packId", value))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -149,6 +210,14 @@ class TaskTest extends TestContainersBaseTest {
         var fields = new HashMap<>(taskFields("Changed", true, packId));
         fields.remove(missingField);
         rejectTaskWrite(method, fields, missingField);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"POST", "PUT"})
+    void createAndUpdateRejectExplicitNullCompleted(String method) throws Exception {
+        var fields = new HashMap<>(taskFields("Changed", false, packId));
+        fields.put("completed", null);
+        rejectTaskWrite(method, fields, "completed");
     }
 
     private void rejectTaskWrite(String method, Map<String, Object> fields, String invalidField) throws Exception {

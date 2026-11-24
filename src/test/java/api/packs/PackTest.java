@@ -3,17 +3,23 @@ package api.packs;
 import api.TestContainersBaseTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static api.ApiTestSupport.*;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.json.JsonCompareMode.STRICT;
@@ -21,52 +27,77 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class PackTest extends TestContainersBaseTest {
-    @Autowired private MockMvc mockMvc;
+    private MockMvc mockMvc;
     @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private EntityManager entityManager;
+    private EntityManager entityManager;
     private String accessToken;
     private static final String PACKS = "/api/packs";
 
     @BeforeEach
-    void createAuthenticatedUser() throws Exception {
+    void createAuthenticatedUser(@Autowired MockMvc mockMvc, @Autowired EntityManager entityManager) throws Exception {
+        this.mockMvc = mockMvc;
+        this.entityManager = entityManager;
         accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
     }
 
     @Test
-    void listReturnsOnlyCurrentUserPacks() throws Exception {
-        int packId = createPack(mockMvc, accessToken, "Own pack");
+    void listPacksAcrossPagesWithoutRepeatingOrSkippingItems() throws Exception {
+        int first = createPack(mockMvc, accessToken, "Z");
         String otherToken = createUserAndGetAccessToken(mockMvc, "other@example.com");
-        createPack(mockMvc, otherToken, "Other pack");
-        mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken))).andExpect(status().isOk())
-                .andExpect(content().json("[{\"id\":%d,\"title\":\"Own pack\"}]".formatted(packId), STRICT));
+        createPack(mockMvc, otherToken, "Foreign");
+        int second = createPack(mockMvc, accessToken, "M");
+        int third = createPack(mockMvc, accessToken, "C");
+        int fourth = createPack(mockMvc, accessToken, "A");
+
+        var firstPage = mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken)).param("limit", "2"))
+                .andExpect(status().isOk()).andExpect(content().json("""
+                        {"items":[{"id":%d,"title":"Z"},{"id":%d,"title":"M"}],"nextAfterId":%d}
+                        """.formatted(first, second, second), STRICT)).andReturn();
+        mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken))
+                        .param("limit", "2").param("afterId", readNextAfterId(firstPage)))
+                .andExpect(status().isOk()).andExpect(content().json("""
+                        {"items":[{"id":%d,"title":"C"},{"id":%d,"title":"A"}],"nextAfterId":null}
+                        """.formatted(third, fourth), STRICT));
+        mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken)).param("afterId", String.valueOf(fourth)))
+                .andExpect(status().isOk()).andExpect(content().json(EMPTY_PAGE, STRICT));
     }
 
     @Test
-    void listReturnsEmptyArrayWhenUserHasNoPacks() throws Exception {
-        mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken))).andExpect(status().isOk())
-                .andExpect(content().json("[]", STRICT));
+    void listPacksWithoutLimitReturnsFiftyItemsThenRemainingPack() throws Exception {
+        var packIds = new ArrayList<Integer>();
+        for (int index = 0; index < 51; index++) {
+            packIds.add(createPack(mockMvc, accessToken, "Pack " + index));
+        }
+        var firstPage = mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items", hasSize(50)))
+                .andExpect(jsonPath("$.nextAfterId").value(packIds.get(49))).andReturn();
+        mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken)).param("afterId", readNextAfterId(firstPage)))
+                .andExpect(status().isOk()).andExpect(content().json("""
+                        {"items":[{"id":%d,"title":"Pack 50"}],"nextAfterId":null}
+                        """.formatted(packIds.getLast()), STRICT));
     }
 
     @Test
-    void getReturnsPackWithOnlyItsTasksSortedById() throws Exception {
+    void listReturnsEmptyPageWhenUserHasNoPacks() throws Exception {
+        mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken)).param("limit", "100")).andExpect(status().isOk())
+                .andExpect(content().json(EMPTY_PAGE, STRICT));
+    }
+
+    @ParameterizedTest
+    @MethodSource("api.ApiTestSupport#provideInvalidPaginationParameters")
+    void listPacksRejectsInvalidPaginationParameter(String name, String value) throws Exception {
+        mockMvc.perform(get(PACKS).cookie(accessCookie(accessToken)).param(name, value))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void getPackReturnsOnlyIdAndTitle() throws Exception {
         int packId = createPack(mockMvc, accessToken, "Study");
-        int firstId = createTask(mockMvc, accessToken, "Z", false, packId);
-        int secondId = createTask(mockMvc, accessToken, "A", true, packId);
-        int otherId = createPack(mockMvc, accessToken, "Other");
-        createTask(mockMvc, accessToken, "Excluded", false, otherId);
+        createTask(mockMvc, accessToken, "Read", false, packId);
         mockMvc.perform(get(PACKS + "/" + packId).cookie(accessCookie(accessToken))).andExpect(status().isOk())
                 .andExpect(content().json("""
-                        {"id":%d,"title":"Study","tasks":[
-                          {"id":%d,"title":"Z","completed":false,"packId":%d},
-                          {"id":%d,"title":"A","completed":true,"packId":%d}]}
-                        """.formatted(packId, firstId, packId, secondId, packId), STRICT));
-    }
-
-    @Test
-    void getReturnsEmptyTasksArrayForPackWithoutTasks() throws Exception {
-        int packId = createPack(mockMvc, accessToken, "Empty");
-        mockMvc.perform(get(PACKS + "/" + packId).cookie(accessCookie(accessToken))).andExpect(status().isOk())
-                .andExpect(content().json("{\"id\":%d,\"title\":\"Empty\",\"tasks\":[]}".formatted(packId), STRICT));
+                        {"id":%d,"title":"Study"}
+                        """.formatted(packId), STRICT));
     }
 
     @Test
@@ -91,18 +122,40 @@ class PackTest extends TestContainersBaseTest {
         assertStoredTitle(packId, "After");
     }
 
-    @Test
-    void deleteRemovesPackAndItsTasks() throws Exception {
-        int packId = createPack(mockMvc, accessToken, "Delete");
-        int taskId = createTask(mockMvc, accessToken, "Cascade", false, packId);
-        entityManager.flush();
-        entityManager.clear();
-        mockMvc.perform(createChangingRequest(mockMvc, "DELETE", PACKS + "/" + packId, accessToken))
-                .andExpect(status().isNoContent()).andExpect(content().string(""));
-        entityManager.flush();
-        assertEquals(0, jdbcTemplate.queryForObject("SELECT count(*) FROM packs WHERE id=?", Integer.class, packId));
-        assertEquals(0, jdbcTemplate.queryForObject("SELECT count(*) FROM tasks WHERE id=?", Integer.class, taskId));
+    @Nested
+    class PackDeletion {
+        @Test
+        void deletePackRemovesItsTasksAndKeepsTasksInOtherPack() throws Exception {
+            int studyPack = createPack(mockMvc, accessToken, "Study");
+            int firstTask = createTask(mockMvc, accessToken, "Read", false, studyPack);
+            int secondTask = createTask(mockMvc, accessToken, "Write", true, studyPack);
+            int homePack = createPack(mockMvc, accessToken, "Home");
+            int homeTask = createTask(mockMvc, accessToken, "Cook", false, homePack);
+            entityManager.flush();
+            entityManager.clear();
+
+            mockMvc.perform(createChangingRequest(mockMvc, "DELETE", PACKS + "/" + studyPack, accessToken))
+                    .andExpect(status().isNoContent()).andExpect(content().string(""));
+            entityManager.flush();
+            entityManager.clear();
+
+            mockMvc.perform(get(PACKS + "/" + studyPack).cookie(accessCookie(accessToken)))
+                    .andExpect(status().isNotFound());
+            for (int deletedTask : List.of(firstTask, secondTask)) {
+                mockMvc.perform(get("/api/tasks/" + deletedTask).cookie(accessCookie(accessToken)))
+                        .andExpect(status().isNotFound());
+            }
+            mockMvc.perform(get(PACKS + "/" + homePack).cookie(accessCookie(accessToken)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(homePack));
+            mockMvc.perform(get("/api/tasks/" + homeTask).cookie(accessCookie(accessToken)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.packId").value(homePack));
+        }
     }
+
+    @Nested
+    @ActiveProfiles(profiles = "dev", inheritProfiles = false)
+    @TestPropertySource(properties = "DATABASE_URL=jdbc:postgresql://unused.invalid/tasks")
+    class DevelopmentPackDeletion extends PackDeletion {}
 
     @ParameterizedTest
     @MethodSource("api.ApiTestSupport#provideUnavailableResources")

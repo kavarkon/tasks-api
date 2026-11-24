@@ -1,10 +1,9 @@
 package api.auth.dto;
 
+import api.users.EmailNormalizer;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-
-import java.util.Locale;
 
 public class LoginRequest {
 
@@ -21,7 +20,7 @@ public class LoginRequest {
     }
 
     public void setEmail(String email) {
-        this.email = email == null ? null : email.strip().toLowerCase(Locale.ROOT);
+        this.email = EmailNormalizer.normalize(email);
     }
 
     public String getPassword() {

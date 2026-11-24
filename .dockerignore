@@ -5,7 +5,7 @@
 build/*
 !build/libs/
 build/libs/*
-!build/libs/tasks-0.0.1-SNAPSHOT.jar
+!build/libs/app.jar
 bin
 *.pem
 *.key

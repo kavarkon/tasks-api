@@ -1,7 +1,22 @@
 [![Gradle build](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml/badge.svg)](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml) CI runs `./gradlew build` to assemble the application and run the test suite.
 
 ## Run locally
-The default profile is `dev`. Use a disposable PostgreSQL database: Hibernate recreates the schema on startup and drops it on normal shutdown (`create-drop`). Flyway is disabled in `dev`.
+The default profile is `dev`. Flyway applies migrations and Hibernate validates the schema. Restarting the API keeps your data. Start with a new empty development database when switching from the old Hibernate-generated schema. Do not reset a database that you need to keep.
+
+### With Docker Compose
+From the repository root, build the JAR with JDK 21, then start the API and PostgreSQL 16:
+
+```bash
+./gradlew bootJar
+docker compose up --build -d
+```
+
+Once Spring finishes starting, check the API with `curl http://127.0.0.1:8080/api/auth/csrf`. PostgreSQL is accessible only on the Compose network. The credentials in `compose.yaml` are for local development only. Repeat both commands after changing application code.
+
+* `docker compose down` stops and removes the containers but keeps the database volume. Use `docker compose up -d` to start again with the same data.
+* `docker compose down -v` also deletes this project's database volume and all its data. On the next start Flyway creates a fresh schema.
+
+### Without Compose
 
 With Nix, start PostgreSQL first and make sure the `tasks` database exists. The dev shell provides Java 21 and sets `DATABASE_URL` for PostgreSQL on `localhost:5432` with user `postgres` and password `password`. It does not start PostgreSQL.
 
@@ -33,7 +48,7 @@ With those variables exported, build the executable JAR and start it with the `p
 
 ```bash
 ./gradlew bootJar
-SPRING_PROFILES_ACTIVE=prod java -jar build/libs/tasks-0.0.1-SNAPSHOT.jar
+SPRING_PROFILES_ACTIVE=prod java -jar build/libs/app.jar
 ```
 
 As in tests, Flyway applies migrations and Hibernate validates the schema.

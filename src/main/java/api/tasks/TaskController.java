@@ -1,8 +1,10 @@
 package api.tasks;
 
-import api.tasks.dto.CreateTaskRequest;
+import api.common.CursorPage;
+import api.common.PageQuery;
+
 import api.tasks.dto.TaskResponse;
-import api.tasks.dto.UpdateTaskRequest;
+import api.tasks.dto.TaskWriteRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,10 +15,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -31,16 +33,23 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<TaskResponse> create(
             @AuthenticationPrincipal Integer userId,
-            @Valid @RequestBody CreateTaskRequest request
+            @Valid @RequestBody TaskWriteRequest request
     ) {
         TaskResponse response = taskService.create(request, userId);
-        URI location = URI.create("/api/tasks/" + response.getId());
+        URI location = URI.create("/api/tasks/" + response.id());
         return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskResponse>> index(@AuthenticationPrincipal Integer userId) {
-        return ResponseEntity.ok(taskService.index(userId));
+    public ResponseEntity<CursorPage<TaskResponse>> index(
+            @AuthenticationPrincipal Integer userId,
+            @RequestParam(required = false) String limit,
+            @RequestParam(required = false) String afterId,
+            @RequestParam(required = false) String packId
+    ) {
+        PageQuery page = PageQuery.parse(limit, afterId);
+        Integer selectedPackId = packId == null ? null : PageQuery.parsePositiveInteger("packId", packId);
+        return ResponseEntity.ok(taskService.index(userId, page, selectedPackId));
     }
 
     @GetMapping("/{id}")
@@ -55,7 +64,7 @@ public class TaskController {
     public ResponseEntity<TaskResponse> update(
             @PathVariable Integer id,
             @AuthenticationPrincipal Integer userId,
-            @Valid @RequestBody UpdateTaskRequest request
+            @Valid @RequestBody TaskWriteRequest request
     ) {
         return ResponseEntity.ok(taskService.update(request, id, userId));
     }

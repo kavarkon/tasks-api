@@ -1,8 +1,6 @@
 package api.packs;
 
-import api.tasks.Task;
 import api.users.User;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,11 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "packs")
@@ -31,9 +25,6 @@ public class Pack {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
-    @OneToMany(mappedBy = "pack", cascade = CascadeType.REMOVE)
-    private Set<Task> tasks = new HashSet<>();
 
     protected Pack() {
     }
@@ -57,9 +48,5 @@ public class Pack {
 
     public User getUser() {
         return user;
-    }
-
-    public Set<Task> getTasks() {
-        return tasks;
     }
 }

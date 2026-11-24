@@ -50,6 +50,16 @@ class AuthenticationTest extends TestContainersBaseTest {
         mockMvc.perform(get("/api/packs")).andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void registerWithMixedCaseEmailAndLoginWithDifferentCase() throws Exception {
+        String canonicalEmail = "alice@example.com";
+        submit(REGISTER, createCredentials(" Alice@Example.COM ")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value(canonicalEmail));
+        submit(LOGIN, createCredentials("ALICE@example.com")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(canonicalEmail))
+                .andExpect(cookie().exists("access_token"));
+    }
+
     static Stream<Arguments> provideInvalidLoginFields() {
         return Stream.of(Arguments.of("email", null), Arguments.of("email", ""), Arguments.of("email", "invalid"),
                 Arguments.of("email", "a".repeat(250) + "@example.com"), Arguments.of("password", null),
@@ -79,6 +89,10 @@ class AuthenticationTest extends TestContainersBaseTest {
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void registerConcurrentRequestsWithSameEmailReturnsCreatedAndConflict() throws Exception {
+        assertConcurrentRegistration(mockMvc, jdbcTemplate);
+    }
+
+    private static void assertConcurrentRegistration(MockMvc mockMvc, JdbcTemplate jdbcTemplate) throws Exception {
         String email = "concurrent-registration@example.com";
         String credentials = createCredentials(email);
         var startBarrier = new CyclicBarrier(2);
@@ -104,7 +118,7 @@ class AuthenticationTest extends TestContainersBaseTest {
         jdbcTemplate.execute((ConnectionCallback<Void>) connection -> {
             var savepoint = connection.setSavepoint();
             try (var statement = connection.prepareStatement("INSERT INTO users (email, password_hash) VALUES (?, ?)")) {
-                statement.setString(1, "UNIQUE@example.com");
+                statement.setString(1, "unique@example.com");
                 statement.setString(2, "password-hash");
                 assertEquals("23505", assertThrows(SQLException.class, statement::executeUpdate).getSQLState());
             } finally {
@@ -123,6 +137,20 @@ class AuthenticationTest extends TestContainersBaseTest {
                 .andExpect(content().json(registeredUser, org.springframework.test.json.JsonCompareMode.STRICT))
                 .andExpect(cookie().httpOnly("access_token", true)).andReturn().getResponse();
         mockMvc.perform(get("/api/packs").cookie(response.getCookie("access_token"))).andExpect(status().isOk());
+    }
+
+    @Nested
+    @ActiveProfiles(profiles = "dev", inheritProfiles = false)
+    @TestPropertySource(properties = "DATABASE_URL=jdbc:postgresql://unused.invalid/tasks")
+    class Development extends TestContainersBaseTest {
+        @Autowired private MockMvc developmentMockMvc;
+        @Autowired private JdbcTemplate developmentJdbcTemplate;
+
+        @Test
+        @Transactional(propagation = Propagation.NOT_SUPPORTED)
+        void registerConcurrentRequestsWithSameEmailReturnsCreatedAndConflict() throws Exception {
+            assertConcurrentRegistration(developmentMockMvc, developmentJdbcTemplate);
+        }
     }
 
     @Nested

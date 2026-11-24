@@ -1,10 +1,10 @@
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL
+    password_hash VARCHAR(255) NOT NULL,
+    CONSTRAINT ck_users_email_canonical CHECK (email = lower(btrim(email))),
+    CONSTRAINT uk_users_email UNIQUE (email)
 );
-
-CREATE UNIQUE INDEX uk_users_email ON users (lower(email));
 
 CREATE TABLE packs (
     id SERIAL PRIMARY KEY,
@@ -25,3 +25,6 @@ CREATE TABLE tasks (
         REFERENCES packs (id)
         ON DELETE CASCADE
 );
+
+CREATE INDEX ix_packs_user_id_id ON packs (user_id, id);
+CREATE INDEX ix_tasks_pack_id_id ON tasks (pack_id, id);
