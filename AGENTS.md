@@ -6,6 +6,7 @@
 
 ## Unrequested tasks and issues
 
+* Leave working behavior unchanged unless the requested outcome requires a change or a confirmed defect is in scope. A hypothetical failure is not a defect.
 - Do not attempt to solve tasks that the user has not requested.
 - Do not propose solutions or write a plan to fix an issue unless the user has requested it.
 - If you notice an issue outside the user's request, you may only point it out and ask whether the user wants to address it.

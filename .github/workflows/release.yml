@@ -1,0 +1,86 @@
+name: Release Docker image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE: docker.io/kavarkon/tasks-api:${{ github.sha }}
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: tasks
+          POSTGRES_USER: tasks
+          POSTGRES_PASSWORD: release-test-only
+        ports:
+          - "127.0.0.1:5432:5432"
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U tasks -d tasks"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build and test application
+        run: ./gradlew clean build
+
+      - name: Build image for artist
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --tag "$IMAGE" .
+
+      - name: Verify image against PostgreSQL
+        shell: bash
+        run: |
+          JWT_SECRET="$(openssl rand -hex 32)"
+          export JWT_SECRET
+          docker run --detach --name release-api --network host \
+            --env SPRING_PROFILES_ACTIVE=prod \
+            --env SERVER_ADDRESS=127.0.0.1 \
+            --env DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/tasks \
+            --env SPRING_DATASOURCE_USERNAME=tasks \
+            --env SPRING_DATASOURCE_PASSWORD=release-test-only \
+            --env CORS_ALLOWED_ORIGIN=https://todo.puorp.ru \
+            --env JWT_SECRET \
+            "$IMAGE"
+          trap 'docker rm --force release-api >/dev/null' EXIT
+
+          curl --fail --silent --show-error \
+            --retry 30 --retry-connrefused --retry-delay 1 --max-time 3 \
+            http://127.0.0.1:8080/api/auth/csrf |
+            jq -se 'length == 1 and (.[0] | .headerName == "X-CSRF-TOKEN" and (.token | type == "string" and length > 0))' >/dev/null
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Publish verified image
+        run: |
+          docker push "$IMAGE"
+          image_reference=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}')
+          printf 'Commit: %s\n\nImage: %s\n' "$GITHUB_SHA" "$image_reference" >> "$GITHUB_STEP_SUMMARY"
