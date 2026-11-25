@@ -1,5 +1,21 @@
 [![Gradle build](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml/badge.svg)](https://github.com/kavarkon/tasks-api/actions/workflows/main.yml) CI runs `./gradlew build` to assemble the application and run the test suite.
 
+Public API: `https://todo.puorp.ru/api`. Check it without signing in:
+
+```bash
+curl https://todo.puorp.ru/api/auth/csrf
+```
+
+## Develop the frontend against the public API
+
+```bash
+cd ~/project/tasks-front
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. Use relative paths such as `/api/packs`. Vite proxies them to the public API, so no local Java, Docker or PostgreSQL is needed. Use a separate development account: registrations, tasks and edits go to the production database.
+
 ## Run locally
 The default profile is `dev`. Flyway applies migrations and Hibernate validates the schema. Restarting the API keeps your data. Start with a new empty development database when switching from the old Hibernate-generated schema. Do not reset a database that you need to keep.
 
@@ -42,7 +58,21 @@ Testcontainers starts PostgreSQL. You need a running container engine accessible
 Rootless Podman is supported: if `DOCKER_HOST` is unset and the user's Podman socket exists, the dev shell selects it. With JDK 21 and a container engine already configured, run `./gradlew test` directly.
 
 ## Production
-Set `DATABASE_URL`, `CORS_ALLOWED_ORIGIN` and `JWT_SECRET`. Generate the signing key once, for example with `openssl rand -hex 32`. Store it securely and supply the same value across restarts. JWTs expire after seven days by default. Set `JWT_EXPIRATION_SECONDS` to change the lifetime.
+
+### Release the image
+From GitHub Actions, run [Release Docker image](.github/workflows/release.yml) manually on `main`. It runs the Gradle tests, builds the image and checks it with the `prod` profile against PostgreSQL before pushing it to Docker Hub. The image is tagged with the Git commit. Copy the image reference with its digest from the workflow summary. Publishing does not deploy to `artist`.
+
+### Update artist
+In the `nixos-server` repository, replace the image digest for `tasks-api` in `hosts/artist.nix` with the one from the release. From the repository root, apply the configuration:
+
+```bash
+nixos-rebuild switch --flake .#artist --target-host root@artist --no-reexec
+```
+
+On `artist`, Nix sets `SPRING_PROFILES_ACTIVE=prod`, `DATABASE_URL`, `SPRING_DATASOURCE_USERNAME` and `CORS_ALLOWED_ORIGIN`. An agenix-encrypted environment file supplies `SPRING_DATASOURCE_PASSWORD` and `JWT_SECRET`. Flyway applies pending migrations to the existing database during startup. A normal update does not require a database reset.
+
+### Run the JAR manually
+Set `DATABASE_URL`, `CORS_ALLOWED_ORIGIN` and `JWT_SECRET`. If database credentials are not in the JDBC URL, also set `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD`. Generate the signing key once, for example with `openssl rand -hex 32`. Store it securely and supply the same value across restarts. JWTs expire after seven days by default. Set `JWT_EXPIRATION_SECONDS` to change the lifetime.
 
 With those variables exported, build the executable JAR and start it with the `prod` profile:
 
@@ -54,4 +84,6 @@ SPRING_PROFILES_ACTIVE=prod java -jar build/libs/app.jar
 As in tests, Flyway applies migrations and Hibernate validates the schema.
 
 ## API
-The `access_token` cookie has `HttpOnly` and `SameSite=Lax` in every profile. In `prod` it also has `Secure`. See [API scenarios](doc/scenarios.md) for the CSRF flow, endpoints, request and response examples, and error formats.
+
+* [API contract](doc/contract.md): endpoints, authentication, CSRF, request fields, response formats and errors.
+* [API scenarios](doc/scenarios.md): examples of signing in, moving a task between packs and reading lists one page at a time.
