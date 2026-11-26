@@ -104,7 +104,7 @@ class PackTest extends TestContainersBaseTest {
     void createReturnsPackAndLocationWithAuthenticatedOwner() throws Exception {
         String otherToken = createUserAndGetAccessToken(mockMvc, "other@example.com");
         Integer otherId = jdbcTemplate.queryForObject("SELECT id FROM users WHERE email = ?", Integer.class, "other@example.com");
-        var result = mockMvc.perform(createChangingRequest(mockMvc, "POST", PACKS, accessToken)
+        var result = mockMvc.perform(createChangingRequest("POST", PACKS, accessToken)
                         .contentType(APPLICATION_JSON).content(encodeJson(Map.of("title", "Mine", "userId", otherId))))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.title").value("Mine")).andReturn();
         String path = PACKS + "/" + readCreatedId(result, PACKS);
@@ -115,7 +115,7 @@ class PackTest extends TestContainersBaseTest {
     @Test
     void updateReturnsAndPersistsUpdatedPack() throws Exception {
         int packId = createPack(mockMvc, accessToken, "Before");
-        mockMvc.perform(createChangingRequest(mockMvc, "PUT", PACKS + "/" + packId, accessToken)
+        mockMvc.perform(createChangingRequest("PUT", PACKS + "/" + packId, accessToken)
                         .contentType(APPLICATION_JSON).content("{\"title\":\"After\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(packId))
                 .andExpect(jsonPath("$.title").value("After"));
@@ -134,7 +134,7 @@ class PackTest extends TestContainersBaseTest {
             entityManager.flush();
             entityManager.clear();
 
-            mockMvc.perform(createChangingRequest(mockMvc, "DELETE", PACKS + "/" + studyPack, accessToken))
+            mockMvc.perform(createChangingRequest("DELETE", PACKS + "/" + studyPack, accessToken))
                     .andExpect(status().isNoContent()).andExpect(content().string(""));
             entityManager.flush();
             entityManager.clear();
@@ -164,7 +164,7 @@ class PackTest extends TestContainersBaseTest {
         int packId = foreign ? createPack(mockMvc, createUserAndGetAccessToken(mockMvc, "other@example.com"), "Private") : -1;
         String path = PACKS + "/" + packId;
         var request = method.equals("GET") ? get(path).cookie(accessCookie(accessToken))
-                : createChangingRequest(mockMvc, method, path, accessToken);
+                : createChangingRequest(method, path, accessToken);
         if (method.equals("PUT")) request.contentType(APPLICATION_JSON).content("{\"title\":\"Changed\"}");
         mockMvc.perform(request).andExpect(status().isNotFound());
         if (foreign) assertStoredTitle(packId, "Private");
@@ -175,7 +175,7 @@ class PackTest extends TestContainersBaseTest {
     void createAndUpdateRejectInvalidTitle(String method, String title) throws Exception {
         int packId = createPack(mockMvc, accessToken, "Original");
         String path = method.equals("POST") ? PACKS : PACKS + "/" + packId;
-        mockMvc.perform(createChangingRequest(mockMvc, method, path, accessToken).contentType(APPLICATION_JSON)
+        mockMvc.perform(createChangingRequest(method, path, accessToken).contentType(APPLICATION_JSON)
                         .content(title == null ? "{}" : encodeJson(Map.of("title", title))))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.title").isNotEmpty());
         assertStoredTitle(packId, "Original");
@@ -189,7 +189,7 @@ class PackTest extends TestContainersBaseTest {
         boolean creating = method.equals("POST");
         int packId = creating ? -1 : createPack(mockMvc, accessToken, "Before");
         String path = creating ? PACKS : PACKS + "/" + packId;
-        var result = mockMvc.perform(createChangingRequest(mockMvc, method, path, accessToken)
+        var result = mockMvc.perform(createChangingRequest(method, path, accessToken)
                         .contentType(APPLICATION_JSON).content(encodeJson(Map.of("title", title))))
                 .andExpect(creating ? status().isCreated() : status().isOk()).andExpect(jsonPath("$.title").value(title)).andReturn();
         assertStoredTitle(creating ? readCreatedId(result, PACKS) : packId, title);

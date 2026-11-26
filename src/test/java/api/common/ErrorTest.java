@@ -41,7 +41,7 @@ class ErrorTest extends TestContainersBaseTest {
             "/api/tasks | {\"title\":\"Task\",\"completed\":false,\"packId\":\"1\"}"})
     void returnBadRequestForMalformedJsonOrInvalidFieldType(String path, String body) throws Exception {
         String accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
-        mockMvc.perform(createChangingRequest(mockMvc, "POST", path, accessToken).contentType(APPLICATION_JSON).content(body))
+        mockMvc.perform(createChangingRequest("POST", path, accessToken).contentType(APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").isNotEmpty()).andExpect(jsonPath("$.path").value(path));
     }
@@ -50,7 +50,7 @@ class ErrorTest extends TestContainersBaseTest {
     void returnMethodNotAllowedWithSupportedMethods() throws Exception {
         String accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
         String path = "/api/packs/7";
-        mockMvc.perform(createChangingRequest(mockMvc, "PATCH", path, accessToken)
+        mockMvc.perform(createChangingRequest("PATCH", path, accessToken)
                         .contentType(APPLICATION_JSON).content("{}"))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(header().string(ALLOW, containsString("PUT")))
@@ -64,7 +64,7 @@ class ErrorTest extends TestContainersBaseTest {
     @Test
     void returnUnsupportedMediaTypeForPlainTextTaskRequest() throws Exception {
         String accessToken = createUserAndGetAccessToken(mockMvc, "owner@example.com");
-        mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/tasks", accessToken)
+        mockMvc.perform(createChangingRequest("POST", "/api/tasks", accessToken)
                         .contentType(TEXT_PLAIN).content("{}"))
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
@@ -84,7 +84,7 @@ class ErrorTest extends TestContainersBaseTest {
 
     @Test
     void returnValidationErrorsWithFieldMessages() throws Exception {
-        mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/auth/register", null)
+        mockMvc.perform(createChangingRequest("POST", "/api/auth/register", null)
                         .contentType(APPLICATION_JSON).content("{\"email\":\"invalid\"}"))
                 .andExpect(status().isBadRequest()).andExpect(content().json("""
                         {"status":400,"message":"Проверьте введённые данные","path":"/api/auth/register",

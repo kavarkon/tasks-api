@@ -3,8 +3,10 @@
 Public API: `https://todo.puorp.ru/api`. Check it without signing in:
 
 ```bash
-curl https://todo.puorp.ru/api/auth/csrf
+curl --include --request POST https://todo.puorp.ru/api/auth/logout
 ```
+
+Expect `204 No Content`. This request clears only the login cookie.
 
 ## Develop the frontend against the public API
 
@@ -27,7 +29,7 @@ From the repository root, build the JAR with JDK 21, then start the API and Post
 docker compose up --build -d
 ```
 
-Once Spring finishes starting, check the API with `curl http://127.0.0.1:8080/api/auth/csrf`. PostgreSQL is accessible only on the Compose network. The credentials in `compose.yaml` are for local development only. Repeat both commands after changing application code.
+Once Spring finishes starting, check the API with `curl --include --request POST http://127.0.0.1:8080/api/auth/logout`. Expect `204 No Content`. PostgreSQL is accessible only on the Compose network. The credentials in `compose.yaml` are for local development only. Repeat both commands after changing application code.
 
 * `docker compose down` stops and removes the containers but keeps the database volume. Use `docker compose up -d` to start again with the same data.
 * `docker compose down -v` also deletes this project's database volume and all its data. On the next start Flyway creates a fresh schema.
@@ -85,5 +87,5 @@ As in tests, Flyway applies migrations and Hibernate validates the schema.
 
 ## API
 
-* [API contract](doc/contract.md): endpoints, authentication, CSRF, request fields, response formats and errors.
+* [API contract](doc/contract.md): endpoints, authentication, request fields, response formats and errors.
 * [API scenarios](doc/scenarios.md): examples of signing in, moving a task between packs and reading lists one page at a time.

@@ -97,7 +97,7 @@ class AuthenticationTest extends TestContainersBaseTest {
         String credentials = createCredentials(email);
         var startBarrier = new CyclicBarrier(2);
         Callable<Integer> register = () -> {
-            var request = createChangingRequest(mockMvc, "POST", REGISTER, null)
+            var request = createChangingRequest("POST", REGISTER, null)
                     .contentType(APPLICATION_JSON).content(credentials);
             startBarrier.await(10, TimeUnit.SECONDS);
             return mockMvc.perform(request).andReturn().getResponse().getStatus();
@@ -163,9 +163,9 @@ class AuthenticationTest extends TestContainersBaseTest {
         @Test
         void loginSetsSecureAndSameSiteCookieInProduction() throws Exception {
             String credentials = createCredentials("production@example.com");
-            productionMockMvc.perform(createChangingRequest(productionMockMvc, "POST", REGISTER, null)
+            productionMockMvc.perform(createChangingRequest("POST", REGISTER, null)
                             .contentType(APPLICATION_JSON).content(credentials)).andExpect(status().isCreated());
-            productionMockMvc.perform(createChangingRequest(productionMockMvc, "POST", LOGIN, null)
+            productionMockMvc.perform(createChangingRequest("POST", LOGIN, null)
                             .contentType(APPLICATION_JSON).content(credentials)).andExpect(status().isOk())
                     .andExpect(cookie().secure("access_token", true)).andExpect(cookie().httpOnly("access_token", true))
                     .andExpect(cookie().sameSite("access_token", "Lax"));
@@ -189,20 +189,20 @@ class AuthenticationTest extends TestContainersBaseTest {
     @Test
     void logoutClearsCookieAndAllowsRepeatedLogout() throws Exception {
         String token = createUserAndGetAccessToken(mockMvc, "logout@example.com");
-        mockMvc.perform(createChangingRequest(mockMvc, "POST", LOGOUT, token)).andExpect(status().isNoContent())
+        mockMvc.perform(createChangingRequest("POST", LOGOUT, token)).andExpect(status().isNoContent())
                 .andExpect(content().string("")).andExpect(cookie().value("access_token", "")).andExpect(cookie().maxAge("access_token", 0));
-        mockMvc.perform(createChangingRequest(mockMvc, "POST", LOGOUT, null)).andExpect(status().isNoContent());
+        mockMvc.perform(createChangingRequest("POST", LOGOUT, null)).andExpect(status().isNoContent());
     }
 
     @Test
     void logoutDoesNotInvalidateCopiedJwt() throws Exception {
         String token = createUserAndGetAccessToken(mockMvc, "copied@example.com");
-        mockMvc.perform(createChangingRequest(mockMvc, "POST", LOGOUT, token)).andExpect(status().isNoContent());
+        mockMvc.perform(createChangingRequest("POST", LOGOUT, token)).andExpect(status().isNoContent());
         mockMvc.perform(get("/api/packs").cookie(accessCookie(token))).andExpect(status().isOk());
     }
 
     private ResultActions submit(String path, String body) throws Exception {
-        return mockMvc.perform(createChangingRequest(mockMvc, "POST", path, null).contentType(APPLICATION_JSON).content(body));
+        return mockMvc.perform(createChangingRequest("POST", path, null).contentType(APPLICATION_JSON).content(body));
     }
 
     private void assertInvalidField(String path, String field, String invalidValue) throws Exception {

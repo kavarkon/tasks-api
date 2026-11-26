@@ -49,19 +49,17 @@ class ApiHttpTest {
     }
 
     @Test
-    void registerLoginCreateReadTaskAndLogoutOverHttp() throws Exception {
-        CsrfHeader initialCsrf = fetchCsrfHeader();
+    void registerLoginCreateReadTaskAndLogoutWithoutCsrfOverHttp() throws Exception {
         var credentials = Map.of("email", "http-user@example.com", "password", "example-password");
-        assertEquals(201, postJson("/api/auth/register", initialCsrf, credentials).statusCode());
+        assertEquals(201, postJson("/api/auth/register", credentials).statusCode());
         assertEquals(401, get("/api/packs").statusCode());
 
-        assertEquals(200, postJson("/api/auth/login", initialCsrf, credentials).statusCode());
-        CsrfHeader authenticatedCsrf = fetchCsrfHeader();
-        var createdPack = postJson("/api/packs", authenticatedCsrf, Map.of("title", "Study"));
+        assertEquals(200, postJson("/api/auth/login", credentials).statusCode());
+        var createdPack = postJson("/api/packs", Map.of("title", "Study"));
         assertEquals(201, createdPack.statusCode());
         int packId = JSON.readTree(createdPack.body()).get("id").intValue();
         var task = Map.of("title", "Read chapter", "completed", false, "packId", packId);
-        var createdTask = postJson("/api/tasks", authenticatedCsrf, task);
+        var createdTask = postJson("/api/tasks", task);
         assertEquals(201, createdTask.statusCode());
         int taskId = JSON.readTree(createdTask.body()).get("id").intValue();
         String location = createdTask.headers().firstValue(LOCATION).orElseThrow();
@@ -72,8 +70,7 @@ class ApiHttpTest {
         var expectedTask = Map.of("id", taskId, "title", "Read chapter", "completed", false, "packId", packId);
         assertEquals(JSON.valueToTree(expectedTask), JSON.readTree(storedTask.body()));
 
-        var logout = createRequest("/api/auth/logout").header(authenticatedCsrf.headerName(), authenticatedCsrf.token())
-                .POST(HttpRequest.BodyPublishers.noBody());
+        var logout = createRequest("/api/auth/logout").POST(HttpRequest.BodyPublishers.noBody());
         assertEquals(204, send(logout).statusCode());
         assertEquals(401, get(location).statusCode());
     }
@@ -86,7 +83,7 @@ class ApiHttpTest {
         assertEquals(origin, response.headers().firstValue(ACCESS_CONTROL_ALLOW_ORIGIN).orElseThrow());
         assertEquals("true", response.headers().firstValue(ACCESS_CONTROL_ALLOW_CREDENTIALS).orElseThrow());
         assertTrue(readHeaderTokens(response, ACCESS_CONTROL_ALLOW_METHODS).contains("post"));
-        assertTrue(readHeaderTokens(response, ACCESS_CONTROL_ALLOW_HEADERS).containsAll(Set.of("content-type", "x-csrf-token")));
+        assertEquals(Set.of("content-type"), readHeaderTokens(response, ACCESS_CONTROL_ALLOW_HEADERS));
     }
 
     @Test
@@ -96,18 +93,10 @@ class ApiHttpTest {
         assertTrue(response.headers().allValues(ACCESS_CONTROL_ALLOW_ORIGIN).isEmpty());
     }
 
-    private record CsrfHeader(String headerName, String token) {}
-
-    private CsrfHeader fetchCsrfHeader() throws IOException, InterruptedException {
-        var response = get("/api/auth/csrf");
-        assertEquals(200, response.statusCode());
-        return JSON.readValue(response.body(), CsrfHeader.class);
-    }
-
-    private HttpResponse<String> postJson(String path, CsrfHeader csrf, Map<String, ?> fields)
+    private HttpResponse<String> postJson(String path, Map<String, ?> fields)
             throws IOException, InterruptedException {
         return send(createRequest(path).header(CONTENT_TYPE, APPLICATION_JSON_VALUE)
-                .header(csrf.headerName(), csrf.token()).POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(fields))));
+                .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(fields))));
     }
 
     private HttpResponse<String> get(String path) throws IOException, InterruptedException {
@@ -117,7 +106,7 @@ class ApiHttpTest {
     private HttpResponse<String> sendPreflight(String origin) throws IOException, InterruptedException {
         return send(createRequest("/api/tasks").header(ORIGIN, origin)
                 .header(ACCESS_CONTROL_REQUEST_METHOD, "POST")
-                .header(ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type, X-CSRF-TOKEN")
+                .header(ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type")
                 .method("OPTIONS", HttpRequest.BodyPublishers.noBody()));
     }
 

@@ -57,7 +57,7 @@ class ResourceAuthorizationTest extends TestContainersBaseTest {
     }
 
     private void assertUnauthorized(String method, String path, String token) throws Exception {
-        var request = method.equals("GET") ? get(path) : createChangingRequest(mockMvc, method, path, null);
+        var request = method.equals("GET") ? get(path) : createChangingRequest(method, path, null);
         if (token != null) request.cookie(accessCookie(token));
         if (method.equals("POST") || method.equals("PUT")) {
             String body = path.startsWith("/api/packs") ? "{\"title\":\"Pack\"}"

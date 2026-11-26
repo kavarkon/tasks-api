@@ -68,10 +68,11 @@ jobs:
             "$IMAGE"
           trap 'docker rm --force release-api >/dev/null' EXIT
 
-          curl --fail --silent --show-error \
+          response_status="$(curl --fail --silent --show-error \
             --retry 30 --retry-connrefused --retry-delay 1 --max-time 3 \
-            http://127.0.0.1:8080/api/auth/csrf |
-            jq -se 'length == 1 and (.[0] | .headerName == "X-CSRF-TOKEN" and (.token | type == "string" and length > 0))' >/dev/null
+            --request POST --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/auth/logout)"
+          test "$response_status" = "204"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3

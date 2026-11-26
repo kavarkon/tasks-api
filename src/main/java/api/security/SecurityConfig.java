@@ -12,8 +12,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -29,19 +27,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CookieCsrfTokenRepository csrfTokenRepository(@Value("${cookie.secure}") boolean cookieSecure) {
-        CookieCsrfTokenRepository repository = new CookieCsrfTokenRepository();
-        repository.setHeaderName("X-CSRF-TOKEN");
-        repository.setCookieCustomizer(cookie -> cookie.secure(cookieSecure).path("/"));
-        return repository;
-    }
-
-    @Bean
     public CorsConfigurationSource corsConfigurationSource(@Value("${cors.allowed-origin}") String allowedOrigin) {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(allowedOrigin));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN"));
+        configuration.setAllowedHeaders(List.of("Content-Type"));
         configuration.setExposedHeaders(List.of("Location"));
         configuration.setAllowCredentials(true);
 
@@ -56,14 +46,11 @@ public class SecurityConfig {
             JwtService jwtService,
             UserRepository userRepository,
             SecurityErrorHandler securityErrorHandler,
-            CookieCsrfTokenRepository csrfTokenRepository,
             CorsConfigurationSource corsConfigurationSource
     ) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(csrfTokenRepository)
-                        .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))
+                .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
@@ -76,7 +63,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/logout")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers("/api/packs/**", "/api/tasks/**").authenticated()
                         .anyRequest().denyAll());
 

@@ -13,7 +13,6 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -23,30 +22,14 @@ public final class ApiTestSupport {
 
     private ApiTestSupport() {}
 
-    public record CsrfToken(Cookie cookie, String header, String value) {
-        public MockHttpServletRequestBuilder applyTo(MockHttpServletRequestBuilder request) {
-            return request.cookie(cookie).header(header, value);
-        }
-    }
-
-    public static CsrfToken fetchCsrfToken(MockMvc mockMvc, Cookie... cookies) throws Exception {
-        var request = get("/api/auth/csrf");
-        if (cookies.length > 0) request.cookie(cookies);
-        var response = mockMvc.perform(request).andExpect(status().isOk()).andReturn().getResponse();
-        var body = JSON.readTree(response.getContentAsByteArray());
-        return new CsrfToken(response.getCookie("XSRF-TOKEN"), body.get("headerName").stringValue(),
-                body.get("token").stringValue());
-    }
-
     public static Cookie accessCookie(String token) {
         return new Cookie("access_token", token);
     }
 
-    public static MockHttpServletRequestBuilder createChangingRequest(MockMvc mockMvc, String method,
-            String path, String accessToken) throws Exception {
+    public static MockHttpServletRequestBuilder createChangingRequest(String method, String path, String accessToken) {
         var request = request(HttpMethod.valueOf(method), path);
         if (accessToken != null) request.cookie(accessCookie(accessToken));
-        return fetchCsrfToken(mockMvc).applyTo(request);
+        return request;
     }
 
     public static String encodeJson(Map<String, ?> fields) {
@@ -59,9 +42,9 @@ public final class ApiTestSupport {
 
     public static String createUserAndGetAccessToken(MockMvc mockMvc, String email) throws Exception {
         String credentials = createCredentials(email);
-        mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/auth/register", null)
+        mockMvc.perform(createChangingRequest("POST", "/api/auth/register", null)
                         .contentType(APPLICATION_JSON).content(credentials)).andExpect(status().isCreated());
-        return mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/auth/login", null)
+        return mockMvc.perform(createChangingRequest("POST", "/api/auth/login", null)
                         .contentType(APPLICATION_JSON).content(credentials)).andExpect(status().isOk())
                 .andReturn().getResponse().getCookie("access_token").getValue();
     }
@@ -84,7 +67,7 @@ public final class ApiTestSupport {
     }
 
     public static int createPack(MockMvc mockMvc, String token, String title) throws Exception {
-        var result = mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/packs", token)
+        var result = mockMvc.perform(createChangingRequest("POST", "/api/packs", token)
                         .contentType(APPLICATION_JSON).content(encodeJson(Map.of("title", title))))
                 .andExpect(status().isCreated()).andReturn();
         return readCreatedId(result, "/api/packs");
@@ -92,7 +75,7 @@ public final class ApiTestSupport {
 
     public static int createTask(MockMvc mockMvc, String token, String title, boolean completed, int packId)
             throws Exception {
-        var result = mockMvc.perform(createChangingRequest(mockMvc, "POST", "/api/tasks", token)
+        var result = mockMvc.perform(createChangingRequest("POST", "/api/tasks", token)
                         .contentType(APPLICATION_JSON)
                         .content(encodeJson(Map.of("title", title, "completed", completed, "packId", packId))))
                 .andExpect(status().isCreated()).andReturn();

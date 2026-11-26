@@ -90,7 +90,7 @@ class TaskTest extends TestContainersBaseTest {
     @Test
     void listTasksReturnsNotFoundForForeignOrDeletedPack() throws Exception {
         int foreign = createPack(mockMvc, createUserAndGetAccessToken(mockMvc, "other@example.com"), "Private");
-        mockMvc.perform(createChangingRequest(mockMvc, "DELETE", "/api/packs/" + packId, accessToken))
+        mockMvc.perform(createChangingRequest("DELETE", "/api/packs/" + packId, accessToken))
                 .andExpect(status().isNoContent());
         for (int unavailable : List.of(foreign, packId)) {
             mockMvc.perform(get(TASKS).cookie(accessCookie(accessToken)).param("packId", String.valueOf(unavailable)))
@@ -120,7 +120,7 @@ class TaskTest extends TestContainersBaseTest {
 
     @Test
     void createReturnsTaskAndLocation() throws Exception {
-        var result = mockMvc.perform(createChangingRequest(mockMvc, "POST", TASKS, accessToken)
+        var result = mockMvc.perform(createChangingRequest("POST", TASKS, accessToken)
                         .contentType(APPLICATION_JSON).content(encodeJson(taskFields("Read", false, packId))))
                 .andExpect(status().isCreated()).andReturn();
         int taskId = readCreatedId(result, TASKS);
@@ -142,7 +142,7 @@ class TaskTest extends TestContainersBaseTest {
     }
 
     private void updateAndCheckTask(int taskId, String title, boolean completed, int destination) throws Exception {
-        mockMvc.perform(createChangingRequest(mockMvc, "PUT", TASKS + "/" + taskId, accessToken)
+        mockMvc.perform(createChangingRequest("PUT", TASKS + "/" + taskId, accessToken)
                         .contentType(APPLICATION_JSON).content(encodeJson(taskFields(title, completed, destination))))
                 .andExpect(status().isOk()).andExpect(content().json(expectedTask(taskId, title, completed, destination), STRICT));
         assertStoredTask(taskId, title, completed, destination);
@@ -151,7 +151,7 @@ class TaskTest extends TestContainersBaseTest {
     @Test
     void deleteRemovesTask() throws Exception {
         int taskId = createTask(mockMvc, accessToken, "Delete", false, packId);
-        mockMvc.perform(createChangingRequest(mockMvc, "DELETE", TASKS + "/" + taskId, accessToken))
+        mockMvc.perform(createChangingRequest("DELETE", TASKS + "/" + taskId, accessToken))
                 .andExpect(status().isNoContent()).andExpect(content().string(""));
         entityManager.flush();
         assertEquals(0, jdbcTemplate.queryForObject("SELECT count(*) FROM tasks WHERE id=?", Integer.class, taskId));
@@ -165,7 +165,7 @@ class TaskTest extends TestContainersBaseTest {
         int taskId = ownership.equals("foreign") ? createTask(mockMvc, otherToken, "Private", false, otherPackId) : -1;
         String path = TASKS + "/" + taskId;
         var request = method.equals("GET") ? get(path).cookie(accessCookie(accessToken))
-                : createChangingRequest(mockMvc, method, path, accessToken);
+                : createChangingRequest(method, path, accessToken);
         if (method.equals("PUT")) request.contentType(APPLICATION_JSON).content(encodeJson(taskFields("Changed", true, packId)));
         mockMvc.perform(request).andExpect(status().isNotFound());
         if (ownership.equals("foreign")) {
@@ -223,7 +223,7 @@ class TaskTest extends TestContainersBaseTest {
     private void rejectTaskWrite(String method, Map<String, Object> fields, String invalidField) throws Exception {
         int originalId = createTask(mockMvc, accessToken, "Original", false, packId);
         String path = method.equals("POST") ? TASKS : TASKS + "/" + originalId;
-        var result = mockMvc.perform(createChangingRequest(mockMvc, method, path, accessToken)
+        var result = mockMvc.perform(createChangingRequest(method, path, accessToken)
                 .contentType(APPLICATION_JSON).content(encodeJson(fields)));
         if (invalidField == null) result.andExpect(status().isNotFound());
         else result.andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields." + invalidField).isNotEmpty());
